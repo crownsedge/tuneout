@@ -1,37 +1,31 @@
-# tuneout
-An apple script that writes iTunes song and artist information to a text file for use with the "text-from-file" feature of OBS streaming software.  TuneOut and OBS, used together, will display iTunes now-playing information during a stream.
+TuneOut
+-------
 
-First Time Running: 
+TuneOut is an AppleScript application that saves the currently playing song in iTunes to a file (~/Library/Application Support/TuneOut/np.txt, specifically). This might be useful if you use an application like OBS to stream live video and want to incorporate your currently playing iTunes song on the display.
 
-1. Download TuneOut.scpt from my github repo
+How to use
+==========
 
-2. Run the script and press cancel when asking where "TuneOut" application is (will only happen on first run) - AppleScript Editor will open.
+1. Download the latest version of TuneOut.app from the project's releases page and unzip the file.
+2. Right-click the .app file and click "Open", and give macOS permission to run the file. (I don't have a paid developer account yet, sorry!)
+3. Point your OBS text-as-file location to `~/Library/Application Support/TuneOut/np.txt`, where `~` consists of your User folder (usually `/Users/{your user name here}`).
+4. There is no step four!
 
-3. Go to File > Export - File Format: Application > Save
+How to build
+============
 
-Using: 
+1. Clone the repository to your macOS computer.
+2. Open the .scpt file in Script Editor. (It _should_ be set to open using Script Editor by default.)
+3. Click "File ‣ Export..."
+4. Change the File Format to "Application" and ensure "Stay open after run handler" (and optionally "Run-only") is checked.
+5. Click "Save".
 
-1. Open iTunes
+Caveats
+=======
 
-2. Play a song.
+If you play songs with non-latin characters, make sure your font supports them. The font renderer used by OBS does not fall back to fonts where the glyphs needed appears like macOS font rendering typically does.
 
-3. Run the TuneOut applescript from applescrip editor or run the application you made when you exported.
+Thanks
+======
 
-4. Create or Select a text file to use.
-
-5. Create a text source in OBS and select Text-From-File
-
-6. Browse to the file you created from iTunes in step 4. 
-
-7. Format the text as you like!
-
-
-WARNING - Don't select the wrong file in step 4.  This script clears the file contents and rewrites them. 
-
-
-To change "refresh rate" you can change the delay in the script and reexport the app. 
-
-Thanks to @NateSandstorm for pointing this out on the OBS Forums:
-Helpful tip:  goto File > Export and select the Application file format. This way you don't need to run it from Apple Script every time. (Just a convenience feature anyone might want to use.)
-
-It'll ask you to select a text file, but the first time you run it, just type in a name that doesn't already exist, and just use that same file every time. You can then add that text file to OBS and, when iTunes (or any other Music player - just change where it says "iTunes" to the name of the player, like "Spotify") is playing music the file will have the text in it. Also make sure iTunes is running. 
+To [dzomb](https://github.com/dzomb) who wrote the [original version](https://github.com/dzomb/tuneout) of this script and to [wildgift](http://twitch.tv/wildgifticus) for getting me to write this.
