@@ -4,7 +4,7 @@ TuneOut is an AppleScript application that saves the currently playing iTunes tr
 
 ## How to use
 
-1. Download the latest version of TuneOut.app from the project's [releases](/wonaldson/tuneout/releases) page and unzip the file.
+1. Download the latest version of TuneOut.app from the project's [releases](http://github.com/wonaldson/tuneout/releases) page and unzip the file.
 2. Double-click the .app file. (Depending on your Gatekeeper settings, you may have to right-click the .app file and click "Open".)
 3. Point your OBS text-as-file location to `~/Library/Application Support/TuneOut/np.txt`, where `~` consists of your User folder (usually `/Users/{your user name here}`).
 4. There is no step four!
