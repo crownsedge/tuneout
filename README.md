@@ -12,7 +12,7 @@ TuneOut is an AppleScript application that saves the currently playing iTunes tr
 ## How to build
 
 1. Clone the repository to your macOS computer.
-2. Open the .scpt file in Script Editor. (It _should_ be set to open using Script Editor by default.)
+2. Open the .applescript file in Script Editor. (It _should_ be set to open using Script Editor by default.)
 3. Click "File ‣ Export..."
 4. Change the File Format to "Application" and ensure "Stay open after run handler" (and optionally "Run-only") is checked.
 5. Click "Save".
