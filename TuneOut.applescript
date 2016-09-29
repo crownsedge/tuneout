@@ -38,46 +38,124 @@ on write_to_file(this_data, target_file, append_data)
 	end try
 end write_to_file
 
+on binary_write_to_file(this_data, target_file, append_data)
+	try
+		set the target_file to the target_file as string
+		set the open_target_file to open for access file target_file with write permission
+		if append_data is false then set eof of the open_target_file to 0
+		write this_data to the open_target_file starting at eof
+		close access the open_target_file
+		return true
+	on error
+		try
+			close access file target_file
+		end try
+		return false
+	end try
+end binary_write_to_file
+
 on update_iTunes()
 	tell application "iTunes"
-		if player state is paused then
-			set tdata to "Paused"
-			
-		else if player state is stopped then
+		if player state is stopped then
 			set tdata to "Stopped"
+			set rawArt to (my clearData)
 			
-		else
 			try
-				set artwk to first artwork of current track
-				log description of artwk as text
-				log downloaded of artwk as text
-				log format of artwk as text
-				log kind of artwk as text
-				set rddd to data of artwk
-				tell application "Image Events"
-					set rdd to rddd as image
+				if rawArt is not equal to my rawArtOld then
+					my binary_write_to_file(rawArt, my artTempFullPathT, false)
+					log "Temp art successfully saved."
 					
-					log "we didn't crash"
-				end tell
+					tell application "Image Events"
+						set tempImage to open my artTempFullPathT
+						scale tempImage to size 1000
+						save tempImage
+					end tell
+				end if
+			on error errString
+				display dialog errString
 			end try
 			
-			set tdata to "This is an error that you should never see."
-			(* 	We are [probably] playing.
+		else
+			
+			(* first, let's try and figure out the art situation *)
+			set rawArt to null
+			try
+				set artwk to first artwork of current track
+				set rawArt to raw data of artwk
+			end try
+			try
+				if rawArt is null then
+					set rawArt to my clearData
+				end if
+				
+				if rawArt is not equal to my rawArtOld then
+					my binary_write_to_file(rawArt, my artTempFullPathT, false)
+					log "Temp art successfully saved."
+					
+					tell application "Image Events"
+						set tempImage to open my artTempFullPathT
+						scale tempImage to size 1000
+						save tempImage
+					end tell
+				end if
+			on error errString
+				display dialog errString
+			end try
+			
+			(* Now we'll deal with track data *)
+			
+			if player state is paused then
+				set tdata to "Paused"
+				
+			else
+				set tdata to "This is an error that you should never see."
+				(* 	We are [probably] playing.
 					Figure out whether it's a internet radio stream or a song
 				*)
-			if kind of current track is "Internet audio stream" then
-				set tdata to current stream title
-			else
-				set tdata to artist of current track & " - " & name of current track
+				if kind of current track is "Internet audio stream" then
+					set tdata to current stream title
+				else
+					set tdata to artist of current track & " - " & name of current track
+				end if
 			end if
 		end if
-		
-		if tdata is not equal to my tdataOld then
-			my write_to_file(tdata, my textFullPath, false)
-			log "Track data changed. Writing: " & tdata
-			set my tdataOld to tdata
-		end if
 	end tell
+	
+	(* Write images & text to temp files *)
+	if rawArt is not equal to my rawArtOld then
+		tell application "Image Events"
+			save tempImage as PNG in my artFullPathT
+			close tempImage
+			log "Art successfully saved."
+		end tell
+	end if
+	
+	if tdata is not equal to my tdataOld then
+		my write_to_file(tdata, my textFullPathT, false)
+		log "Track data changed. Writing: " & tdata
+	end if
+	
+	(* Move them at the same time to update simultaneously instead of staggered *)
+	if tdata is not equal to my tdataOld then
+		set cmd to "mv " & quoted form of POSIX path of my textFullPathT & space & quoted form of POSIX path of my applicationSupportPath
+		log cmd
+		do shell script cmd
+	end if
+	
+	if rawArt is not equal to my rawArtOld then
+		set cmd to "mv " & quoted form of POSIX path of my artFullPathT & space & quoted form of POSIX path of my applicationSupportPath
+		log cmd
+		do shell script cmd
+	end if
+	
+	(* Finally, update old data listing *)
+	if rawArt is not equal to my rawArtOld then
+		set my rawArtOld to rawArt
+	end if
+	
+	if tdata is not equal to my tdataOld then
+		set my tdataOld to tdata
+	end if
 end update_iTunes
 
 on update_nightbot()
@@ -140,35 +218,43 @@ end test_nightbot
 
 on run
 	set appname to "TuneOut"
-	set appversion to "0.6-alpha"
+	set appversion to "0.6-alpha.2"
 	
 	log "Hello, I am " & appname & " (" & appversion & ")"
-	try
-		tell application "Finder"
-			
-			set applicationSupportPathP to path to application support from user domain as Unicode text
-			set applicationSupportPath to applicationSupportPathP & "TuneOut:"
-			
-			if (exists applicationSupportPath) is false then make new folder at applicationSupportPathP with properties {name:appname}
-			
-			set textFilename to "np.txt"
-			set artFilename to "art.png"
-			
-			set textFullPath to applicationSupportPath & textFilename
-			set artFullPath to applicationSupportPath & artFilename
-			
-			set tdataOld to ""
-			set adataOld to null
-			
-			log "It looks like we are ready."
-			set operational to true
-			
-		end tell
-		
-		tell application "Image Events"
-			launch
-		end tell
-	end try
+	set applicationSupportPathP to path to application support from user domain as Unicode text
+	set applicationSupportPath to applicationSupportPathP & appname & ":"
+	set applicationSupportPathT to applicationSupportPath & "tmp:"
+	
+	tell application "Finder"
+		if (exists applicationSupportPath) is false then make new folder at applicationSupportPathP with properties {name:appname}
+		if (exists applicationSupportPathT) is false then make new folder at applicationSupportPath with properties {name:"tmp"}
+	end tell
+	
+	set textFilename to "np.txt"
+	set artFilename to "art.png"
+	set artTempFilename to "art.tmp"
+	set clearArtFilename to "clear.png"
+	
+	set textFullPath to applicationSupportPath & textFilename
+	set textFullPathT to applicationSupportPathT & textFilename
+	set artFullPath to applicationSupportPath & artFilename
+	set artFullPathT to applicationSupportPathT & artFilename
+	set artTempFullPath to applicationSupportPath & artTempFilename
+	set artTempFullPathT to applicationSupportPathT & artTempFilename
+	
+	set tdataOld to ""
+	set adataOld to null
+	set rawArtOld to null
+	
+	log "It looks like we are ready."
+	set operational to true
+	
+	set clearData to read (path to resource clearArtFilename)
+	
+	tell application "Image Events"
+		launch
+	end tell
+	
 	set playerChoice to button returned of (display dialog "Which player would you like to use?" buttons {"iTunes", "Nightbot"})
 	if playerChoice is "Nightbot" then
 		test_nightbot()
@@ -192,6 +278,7 @@ on quit
 	try
 		log "I think we're done here."
 		write_to_file("Stopped", my textFullPath, false)
+		binary_write_to_file(my clearData, my artFullPath, false)
 		
 		close access textReference
 		close access artReference
