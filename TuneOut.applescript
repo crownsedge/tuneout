@@ -75,10 +75,63 @@ on update_iTunes()
 		if tdata is not equal to my tdataOld then
 			my write_to_file(tdata, my textFullPath, false)
 			log "Track data changed. Writing: " & tdata
-			set tdataOld to tdata
+			set my tdataOld to tdata
 		end if
 	end tell
 end update_iTunes
+
+on update_nightbot()
+	tell application "Safari"
+		set tdata to "Stopped"
+		set nbTab to null
+		repeat with i in windows
+			repeat with j in (tabs of i)
+				if name of j is "Nightbot - Song Requests" then
+					set nbTab to j
+					exit repeat
+				end if
+			end repeat
+			if nbTab is not null then
+				exit repeat
+			end if
+		end repeat
+		if nbTab is not null then
+			try
+				tell nbTab
+					set isPlaying to do JavaScript "document.getElementsByClassName('pause-play-container')[0].getElementsByClassName('fa-play')[0].classList.contains('ng-hide');"
+					if isPlaying then
+						set tdata to do JavaScript "document.getElementsByClassName('current-track')[0].getElementsByTagName('h4')[0].textContent;"
+					else
+						set tdata to "Paused"
+					end if
+				end tell
+			on error errStr number errorNumber
+				(* display alert errStr *)
+			end try
+		end if
+		if tdata is not equal to my tdataOld then
+			my write_to_file(tdata, my textFullPath, false)
+			set my tdataOld to tdata
+			log "Track data changed. Writing: " & tdata
+		end if
+		
+	end tell
+end update_nightbot
+
+on test_nightbot()
+	try
+		tell application "Safari"
+			tell tab 1 of window 1
+				do JavaScript "return true;"
+			end tell
+		end tell
+	on error errStr number errNumber
+		display alert errStr & "
+		
+		TuneOut will quit."
+		error number -128
+	end try
+end test_nightbot
 
 on run
 	set appname to "TuneOut"
@@ -99,25 +152,34 @@ on run
 			set textFullPath to applicationSupportPath & textFilename
 			set artFullPath to applicationSupportPath & artFilename
 			
+			set tdataOld to ""
+			set adataOld to null
+			
 			log "It looks like we are ready."
 			set operational to true
-			set tdataOld to ""
-			set adataOld to nil
+			
 		end tell
 		
 		tell application "Image Events"
 			launch
 		end tell
 	end try
-	display dialog "TuneOut is now running. To quit, right-click the Dock icon and click \"Quit\".
+	set playerChoice to button returned of (display dialog "Which player would you like to use?" buttons {"iTunes", "Nightbot"})
+	if playerChoice is "Nightbot" then
+		test_nightbot()
+	end if
+	display dialog "TuneOut " & appversion & " is now running. To quit, right-click the Dock icon and click \"Quit\".
 
 This dialog will close in 10 seconds." buttons {"OK"} giving up after 10 with icon note
 	idle
 end run
 
 on idle
-	update_iTunes()
-	
+	if my playerChoice is "iTunes" then
+		update_iTunes()
+	else if my playerChoice is "Nightbot" then
+		update_nightbot()
+	end if
 	return 0.5
 end idle
 
