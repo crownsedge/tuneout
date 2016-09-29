@@ -84,17 +84,22 @@ on update_nightbot()
 	tell application "Safari"
 		set tdata to "Stopped"
 		set nbTab to null
-		repeat with i in windows
-			repeat with j in (tabs of i)
-				if name of j is "Nightbot - Song Requests" then
-					set nbTab to j
+		try
+			repeat with i in windows
+				repeat with j in (tabs of i)
+					if name of j is "Nightbot - Song Requests" then
+						set nbTab to j
+						exit repeat
+					end if
+				end repeat
+				if nbTab is not null then
 					exit repeat
 				end if
 			end repeat
-			if nbTab is not null then
-				exit repeat
-			end if
-		end repeat
+		on error errStr number errorNumber
+			(* Just give up for now *)
+			return
+		end try
 		if nbTab is not null then
 			try
 				tell nbTab
