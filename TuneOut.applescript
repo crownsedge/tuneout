@@ -62,7 +62,7 @@ on check_iTunes()
 		tell application "iTunes"
 			if player state is not stopped then
 				(* First, let's try and figure out the art situation *)
-				set rawArt to null
+				
 				try
 					set artwk to first artwork of current track
 					set rawArt to raw data of artwk
@@ -88,12 +88,38 @@ on check_iTunes()
 		end tell
 	end if
 	
-	log {track:tdata, art:rawArt}
 	return {track:tdata, art:rawArt}
 end check_iTunes
 
 on check_spotify()
-	return {track:null, art:null}
+	set tdata to null
+	set rawArt to null
+	
+	if application "Spotify" is running then
+		tell application "Spotify"
+			if player state is not stopped then
+				(* First, let's try and figure out the art situation *)
+				
+				set artUrl to artwork url of current track
+				(* We'll finish this later *)
+				
+				(* Now we'll deal with track data *)
+				
+				if player state is paused then
+					set tdata to "Paused"
+					
+				else
+					if artist of current track is "" then
+						set tdata to name of current track
+					else
+						set tdata to artist of current track & " - " & name of current track
+					end if
+				end if
+			end if
+		end tell
+	end if
+	
+	return {track:tdata, art:rawArt}
 end check_spotify
 
 on check_nightbot()
@@ -119,8 +145,8 @@ on check_nightbot()
 					end if
 				end repeat
 			on error errStr number errorNumber
-				(* Just give up for now *)
-				return
+				log errorNumber & space & errStr
+				return {track:tdata, art:rawArt}
 			end try
 			
 			if nbTab is not null then
@@ -134,7 +160,8 @@ on check_nightbot()
 						end if
 					end tell
 				on error errStr number errorNumber
-					(* display alert errStr *)
+					log errorNumber & space & errStr
+					return {track:tdata, art:rawArt}
 				end try
 			end if
 			
@@ -145,7 +172,12 @@ on check_nightbot()
 end check_nightbot
 
 on check_moobot()
-	return {track:null, art:null}
+	set tdata to null
+	set rawArt to null
+	
+	(* do nothing for now *)
+	
+	return {track:tdata, art:rawArt}
 end check_moobot
 
 on test_safari()
@@ -156,16 +188,16 @@ on test_safari()
 			end tell
 		end tell
 	on error errStr number errNumber
-		set buttonClicked to display dialog errStr & "
-		
-		Continue without Safari support? " with icon note with title my appname
-		if buttonClicked is "Cancel" then error number -128
+		display dialog "You must enable the 'Allow JavaScript from Apple Events' option in Safari's Develop menu to use web-based players.
+
+Continue without Safari support? " with icon caution with title my appname
+		if button returned of dd is "Cancel" then error number -128
 	end try
 end test_safari
 
 on run
 	set appname to "TuneOut"
-	set appversion to "0.6"
+	set appversion to "0.7-alpha"
 	
 	log "Hello, I am " & appname & " (" & appversion & ")"
 	set applicationSupportPathP to path to application support from user domain as Unicode text
@@ -204,10 +236,17 @@ on run
 	log "It looks like we are ready."
 	set operational to true
 	
-	display dialog "TuneOut " & appversion & " is now running. To quit, right-click the Dock icon and click \"Quit\".
-
-This dialog will close in 10 seconds." buttons {"OK"} giving up after 10 with icon note with title my appname
+	display notification "TuneOut " & appversion & " is now running. To quit, right-click the Dock icon and click \"Quit\"."
 	idle
+	
+	(* Script editor testing *)
+	
+	(*
+	repeat while true
+		set d to idle
+		delay d
+	end repeat
+	*)
 end run
 
 on idle
@@ -218,6 +257,11 @@ on idle
 	copy check_spotify() to end of dataPlayers
 	copy check_nightbot() to end of dataPlayers
 	copy check_moobot() to end of dataPlayers
+	
+	log track of item 1 of dataPlayers
+	log track of item 2 of dataPlayers
+	log track of item 3 of dataPlayers
+	log track of item 4 of dataPlayers
 	
 	repeat with i in dataPlayers
 		log i
