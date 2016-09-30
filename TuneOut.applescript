@@ -54,154 +54,101 @@ on binary_write_to_file(this_data, target_file, append_data)
 	end try
 end binary_write_to_file
 
-on update_iTunes()
-	tell application "iTunes"
-		if player state is stopped then
-			set tdata to "Stopped"
-			set rawArt to (my clearData)
-			
-			try
-				if rawArt is not equal to my rawArtOld then
-					my binary_write_to_file(rawArt, my artTempFullPathT, false)
-					log "Temp art successfully saved."
-					
-					tell application "Image Events"
-						set tempImage to open my artTempFullPathT
-						scale tempImage to size 1000
-						save tempImage
-					end tell
-				end if
-			on error errString
-				display dialog errString
-			end try
-			
-		else
-			
-			(* first, let's try and figure out the art situation *)
-			set rawArt to null
-			try
-				set artwk to first artwork of current track
-				set rawArt to raw data of artwk
-			end try
-			try
-				if rawArt is null then
-					set rawArt to my clearData
-				end if
+on check_iTunes()
+	set tdata to null
+	set rawArt to null
+	
+	if application "iTunes" is running then
+		tell application "iTunes"
+			if player state is not stopped then
+				(* First, let's try and figure out the art situation *)
+				set rawArt to null
+				try
+					set artwk to first artwork of current track
+					set rawArt to raw data of artwk
+				end try
 				
-				if rawArt is not equal to my rawArtOld then
-					my binary_write_to_file(rawArt, my artTempFullPathT, false)
-					log "Temp art successfully saved."
-					
-					tell application "Image Events"
-						set tempImage to open my artTempFullPathT
-						scale tempImage to size 1000
-						save tempImage
-					end tell
-				end if
-			on error errString
-				display dialog errString
-			end try
-			
-			(* Now we'll deal with track data *)
-			
-			if player state is paused then
-				set tdata to "Paused"
+				(* Now we'll deal with track data *)
 				
-			else
-				set tdata to "This is an error that you should never see."
-				(* 	We are [probably] playing.
+				if player state is paused then
+					set tdata to "Paused"
+					
+				else
+					set tdata to "This is an error that you should never see."
+					(* 	We are [probably] playing.
 					Figure out whether it's a internet radio stream or a song
 				*)
-				if kind of current track is "Internet audio stream" then
-					set tdata to current stream title
-				else
-					set tdata to artist of current track & " - " & name of current track
+					if kind of current track is "Internet audio stream" then
+						set tdata to current stream title
+					else
+						set tdata to artist of current track & " - " & name of current track
+					end if
 				end if
 			end if
-		end if
-	end tell
-	
-	(* Write images & text to temp files *)
-	if rawArt is not equal to my rawArtOld then
-		tell application "Image Events"
-			save tempImage as PNG in my artFullPathT
-			close tempImage
-			log "Art successfully saved."
 		end tell
 	end if
 	
-	if tdata is not equal to my tdataOld then
-		my write_to_file(tdata, my textFullPathT, false)
-		log "Track data changed. Writing: " & tdata
-	end if
-	
-	(* Move them at the same time to update simultaneously instead of staggered *)
-	if tdata is not equal to my tdataOld then
-		set cmd to "mv " & quoted form of POSIX path of my textFullPathT & space & quoted form of POSIX path of my applicationSupportPath
-		log cmd
-		do shell script cmd
-	end if
-	
-	if rawArt is not equal to my rawArtOld then
-		set cmd to "mv " & quoted form of POSIX path of my artFullPathT & space & quoted form of POSIX path of my applicationSupportPath
-		log cmd
-		do shell script cmd
-	end if
-	
-	(* Finally, update old data listing *)
-	if rawArt is not equal to my rawArtOld then
-		set my rawArtOld to rawArt
-	end if
-	
-	if tdata is not equal to my tdataOld then
-		set my tdataOld to tdata
-	end if
-end update_iTunes
+	log {track:tdata, art:rawArt}
+	return {track:tdata, art:rawArt}
+end check_iTunes
 
-on update_nightbot()
-	tell application "Safari"
-		set tdata to "Stopped"
-		set nbTab to null
-		try
-			repeat with i in windows
-				repeat with j in (tabs of i)
-					if name of j is "Nightbot - Song Requests" then
-						set nbTab to j
-						exit repeat
+on check_spotify()
+	return {track:null, art:null}
+end check_spotify
+
+on check_nightbot()
+	set tdata to null
+	set rawArt to null
+	
+	if application "Safari" is running then
+		tell application "Safari"
+			set nbTab to null
+			
+			try
+				repeat with i in (windows whose its document is not missing value)
+					if (count of (tabs of i)) is greater than 0 then
+						repeat with j in (tabs of i)
+							if name of j is "Nightbot - Song Requests" then
+								set nbTab to j
+								exit repeat
+							end if
+						end repeat
+						if nbTab is not null then
+							exit repeat
+						end if
 					end if
 				end repeat
-				if nbTab is not null then
-					exit repeat
-				end if
-			end repeat
-		on error errStr number errorNumber
-			(* Just give up for now *)
-			return
-		end try
-		if nbTab is not null then
-			try
-				tell nbTab
-					set isPlaying to do JavaScript "document.getElementsByClassName('pause-play-container')[0].getElementsByClassName('fa-play')[0].classList.contains('ng-hide');"
-					if isPlaying then
-						set tdata to do JavaScript "document.getElementsByClassName('current-track')[0].getElementsByTagName('h4')[0].textContent;"
-					else
-						set tdata to "Paused"
-					end if
-				end tell
 			on error errStr number errorNumber
-				(* display alert errStr *)
+				(* Just give up for now *)
+				return
 			end try
-		end if
-		if tdata is not equal to my tdataOld then
-			my write_to_file(tdata, my textFullPath, false)
-			set my tdataOld to tdata
-			log "Track data changed. Writing: " & tdata
-		end if
-		
-	end tell
-end update_nightbot
+			
+			if nbTab is not null then
+				try
+					tell nbTab
+						set isPlaying to do JavaScript "document.getElementsByClassName('pause-play-container')[0].getElementsByClassName('fa-play')[0].classList.contains('ng-hide');"
+						if isPlaying then
+							set tdata to do JavaScript "document.getElementsByClassName('current-track')[0].getElementsByTagName('h4')[0].textContent;"
+						else
+							set tdata to "Paused"
+						end if
+					end tell
+				on error errStr number errorNumber
+					(* display alert errStr *)
+				end try
+			end if
+			
+		end tell
+	end if
+	
+	return {track:tdata, art:rawArt}
+end check_nightbot
 
-on test_nightbot()
+on check_moobot()
+	return {track:null, art:null}
+end check_moobot
+
+on test_safari()
 	try
 		tell application "Safari"
 			tell tab 1 of window 1
@@ -209,16 +156,16 @@ on test_nightbot()
 			end tell
 		end tell
 	on error errStr number errNumber
-		display alert errStr & "
+		set buttonClicked to display dialog errStr & "
 		
-		TuneOut will quit."
-		error number -128
+		Continue without Safari support? " with icon note with title my appname
+		if buttonClicked is "Cancel" then error number -128
 	end try
-end test_nightbot
+end test_safari
 
 on run
 	set appname to "TuneOut"
-	set appversion to "0.6-alpha.2"
+	set appversion to "0.6"
 	
 	log "Hello, I am " & appname & " (" & appversion & ")"
 	set applicationSupportPathP to path to application support from user domain as Unicode text
@@ -246,31 +193,83 @@ on run
 	set adataOld to null
 	set rawArtOld to null
 	
-	log "It looks like we are ready."
-	set operational to true
-	
 	set clearData to read (path to resource clearArtFilename)
 	
 	tell application "Image Events"
 		launch
 	end tell
 	
-	set playerChoice to button returned of (display dialog "Which player would you like to use?" buttons {"iTunes", "Nightbot"})
-	if playerChoice is "Nightbot" then
-		test_nightbot()
-	end if
+	test_safari()
+	
+	log "It looks like we are ready."
+	set operational to true
+	
 	display dialog "TuneOut " & appversion & " is now running. To quit, right-click the Dock icon and click \"Quit\".
 
-This dialog will close in 10 seconds." buttons {"OK"} giving up after 10 with icon note
+This dialog will close in 10 seconds." buttons {"OK"} giving up after 10 with icon note with title my appname
 	idle
 end run
 
 on idle
-	if my playerChoice is "iTunes" then
-		update_iTunes()
-	else if my playerChoice is "Nightbot" then
-		update_nightbot()
+	set chosenData to {track:null, art:null}
+	set dataPlayers to {}
+	
+	copy check_iTunes() to end of dataPlayers
+	copy check_spotify() to end of dataPlayers
+	copy check_nightbot() to end of dataPlayers
+	copy check_moobot() to end of dataPlayers
+	
+	repeat with i in dataPlayers
+		log i
+		if track of i is not null then
+			set chosenData to i
+			exit repeat
+		end if
+	end repeat
+	
+	set tdata to track of chosenData
+	set rawArt to art of chosenData
+	
+	(* If we don't have any data... *)
+	if tdata is null then set tdata to "Stopped"
+	if rawArt is null then set rawArt to my clearData
+	
+	(* Write images & text to temp files if they have changed *)
+	if rawArt is not equal to my rawArtOld then
+		my binary_write_to_file(rawArt, my artTempFullPathT, false)
+		
+		tell application "Image Events"
+			set tempImage to open my artTempFullPathT
+			scale tempImage to size 1000
+			save tempImage as PNG in my artFullPathT
+			close tempImage
+			log "Art successfully saved."
+		end tell
 	end if
+	
+	if tdata is not equal to my tdataOld then
+		my write_to_file(tdata, my textFullPathT, false)
+		log "Track data changed. Writing: " & tdata
+	end if
+	
+	(* Move them at the same time to update simultaneously instead of staggered *)
+	if tdata is not equal to my tdataOld then
+		do shell script "mv " & quoted form of POSIX path of my textFullPathT & space & quoted form of POSIX path of my applicationSupportPath
+	end if
+	
+	if rawArt is not equal to my rawArtOld then
+		do shell script "mv " & quoted form of POSIX path of my artFullPathT & space & quoted form of POSIX path of my applicationSupportPath
+	end if
+	
+	(* Finally, update old data listing *)
+	if rawArt is not equal to my rawArtOld then
+		set my rawArtOld to rawArt
+	end if
+	
+	if tdata is not equal to my tdataOld then
+		set my tdataOld to tdata
+	end if
+	
 	return 0.5
 end idle
 
