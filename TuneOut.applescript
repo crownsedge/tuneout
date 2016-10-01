@@ -3,16 +3,6 @@
 # A text file "np.txt" will be saved in ~/Library/Application Support/TuneOut
 # Point OBS's text display to this file.
 
-(* Future things *)
-# Art will be saved to an "art.png" so you can use that too
-# but that is a lot more complicated to do so it will take more
-# time for me to figure out.
-
-# I also hope to make it significantly easier to
-# customize the display of the script so you can add
-# album titles, move around artist/track, etc.
-
-
 (* Thanks *)
 # Thanks to dzomb who wrote the original version of this script.
 # You can find that here: https://github.com/dzomb/tuneout
@@ -175,7 +165,56 @@ on check_moobot()
 	set tdata to null
 	set rawArt to null
 	
-	(* do nothing for now *)
+	set determinePlayerStateCode to "(document.getElementsByClassName('widget-songrequests')[0].getElementsByClassName('btn-play')[0].getElementsByClassName('icon-stop')[0] != null);"
+	set grabTrackCode to "
+while (document.getElementById('songrequests-widget-info') == null) {
+	document.getElementsByClassName('widget-songrequests')[0].getElementsByClassName('btn-info')[0].click();
+}
+document.getElementById('songrequests-widget-info').getElementsByTagName('p')[0].textContent;"
+	
+	if application "Safari" is running then
+		tell application "Safari"
+			set nbTab to null
+			
+			try
+				repeat with i in (windows whose its document is not missing value)
+					if (count of (tabs of i)) is greater than 0 then
+						repeat with j in (tabs of i)
+							if name of j is "Moobot, your Twitch chat moderator bot" then
+								set nbTab to j
+								exit repeat
+							end if
+						end repeat
+						if nbTab is not null then
+							exit repeat
+						end if
+					end if
+				end repeat
+			on error errStr number errorNumber
+				log errorNumber & space & errStr
+				return {track:tdata, art:rawArt}
+			end try
+			
+			if nbTab is not null then
+				try
+					tell nbTab
+						set isPlaying to do JavaScript determinePlayerStateCode
+						log isPlaying
+						if isPlaying then
+							set tdata to do JavaScript grabTrackCode
+						end if
+					end tell
+				on error errStr number errorNumber
+					log errorNumber & space & errStr
+					return {track:tdata, art:rawArt}
+				end try
+			end if
+			
+		end tell
+	end if
+	
+	if tdata is missing value then set tdata to null
+	if rawArt is missing value then set rawArt to null
 	
 	return {track:tdata, art:rawArt}
 end check_moobot
@@ -197,7 +236,7 @@ end test_safari
 
 on run
 	set appname to "TuneOut"
-	set appversion to "0.7-alpha"
+	set appversion to "0.7"
 	
 	log "Hello, I am " & appname & " (" & appversion & ")"
 	set applicationSupportPathP to path to application support from user domain as Unicode text
@@ -236,8 +275,7 @@ on run
 	log "It looks like we are ready."
 	set operational to true
 	
-	display notification "TuneOut " & appversion & " is now running. To quit, right-click the Dock icon and click \"Quit\"."
-	idle
+	display notification "TuneOut " & appversion & " is now running. To quit, right-click the Dock icon and click \"Quit\"." sound name "Submarine"
 	
 	(* Script editor testing *)
 	
@@ -316,6 +354,10 @@ on idle
 	
 	return 0.5
 end idle
+
+on reopen
+	display notification (my tdataOld) with title "Current track display"
+end reopen
 
 on quit
 	try
