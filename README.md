@@ -28,3 +28,5 @@ Nightbot and Moobot support only works when running in Safari. To enable Safari 
 ## Thanks
 
 To [dzomb](https://github.com/dzomb) who wrote the [original version](https://github.com/dzomb/tuneout) of this script and to [wildgift](http://twitch.tv/wildgifticus) for getting me to write this.
+
+Additional thanks to [Christopher T. Howlett](http://howlettstudios.com) for the royalty-free tuning fork shape used in our icon.
