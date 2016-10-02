@@ -1,8 +1,3 @@
-(* How to use *)
-# Compile the script as an application and run it.
-# A text file "np.txt" will be saved in ~/Library/Application Support/TuneOut
-# Point OBS's text display to this file.
-
 (* Thanks *)
 # Thanks to dzomb who wrote the original version of this script.
 # You can find that here: https://github.com/dzomb/tuneout
@@ -44,179 +39,202 @@ on binary_write_to_file(this_data, target_file, append_data)
 	end try
 end binary_write_to_file
 
-on check_iTunes()
-	set tdata to null
+on debug(errorText, displayNotification)
+	if my debugMode then
+		log "DEBUG: " & errorText
+		if displayNotification then display notification "DEBUG: " & errorText
+	end if
+end debug
+
+on check_web_player(playerTitle, desiredPageTitle, determinePlayerStateCode, grabTrackCode, stoppedWhenNotPlaying)
+	set rawTrack to null
 	set rawArt to null
 	
-	if application "iTunes" is running then
-		tell application "iTunes"
-			if player state is not stopped then
-				(* First, let's try and figure out the art situation *)
-				
-				try
-					set artwk to first artwork of current track
-					set rawArt to raw data of artwk
-				end try
-				
-				(* Now we'll deal with track data *)
-				
-				if player state is paused then
-					set tdata to "Paused"
+	if not my safariDisabled then
+		(* Safari Support *)
+		try
+			if application "Safari" is running then
+				tell application "Safari"
+					set safariTab to null
 					
-				else
-					set tdata to "This is an error that you should never see."
-					(* 	We are [probably] playing.
-					Figure out whether it's a internet radio stream or a song
-				*)
-					if kind of current track is "Internet audio stream" then
-						set tdata to current stream title
-					else
-						set tdata to artist of current track & " - " & name of current track
+					repeat with i in (windows whose its document is not missing value)
+						if (count of (tabs of i)) is greater than 0 then
+							repeat with j in (tabs of i)
+								if name of j is desiredPageTitle then
+									set safariTab to j
+									exit repeat
+								end if
+							end repeat
+							if safariTab is not null then
+								exit repeat
+							end if
+						end if
+					end repeat
+					
+					if safariTab is not null then
+						tell safariTab
+							set isPlaying to do JavaScript determinePlayerStateCode
+							if isPlaying then
+								set rawTrack to do JavaScript grabTrackCode
+							else
+								if not stoppedWhenNotPlaying then set rawTrack to "Paused"
+							end if
+						end tell
 					end if
-				end if
+					
+				end tell
 			end if
-		end tell
+		on error errStr number errorNumber
+			debug("[SAFARI] " & desiredPageTitle & " had a booboo. " & errStr & space & errorNumber, true)
+			set rawTrack to missing value
+			set rawArt to missing value
+		end try
+	end if
+	if (rawTrack is null or rawTrack is missing value) and (rawArt is null or rawArt is missing value) then
+		(* Google Chrome Support *)
+		try
+			if application "Google Chrome" is running then
+				tell application "Google Chrome"
+					set chromeTab to null
+					
+					repeat with i in (windows)
+						if (count of (tabs of i)) is greater than 0 then
+							repeat with j in (tabs of i)
+								if title of j is desiredPageTitle then
+									set chromeTab to j
+									exit repeat
+								end if
+							end repeat
+							if chromeTab is not null then
+								exit repeat
+							end if
+						end if
+					end repeat
+					
+					if chromeTab is not null then
+						tell chromeTab
+							set isPlaying to execute javascript determinePlayerStateCode
+							if isPlaying then
+								set rawTrack to execute javascript grabTrackCode
+							else
+								if not stoppedWhenNotPlaying then set rawTrack to "Paused"
+							end if
+						end tell
+					end if
+					
+				end tell
+			end if
+		on error errStr number errorNumber
+			debug("[CHROME] " & desiredPageTitle & " had a booboo. " & errStr & space & errorNumber, true)
+			set rawTrack to missing value
+			set rawArt to missing value
+		end try
 	end if
 	
-	return {track:tdata, art:rawArt}
+	return {track:rawTrack, art:rawArt}
+end check_web_player
+
+on check_iTunes()
+	set rawTrack to null
+	set rawArt to null
+	
+	try
+		if application "iTunes" is running then
+			tell application "iTunes"
+				if player state is not stopped then
+					(* First, let's try and figure out the art situation *)
+					
+					try
+						set artwk to first artwork of current track
+						set rawArt to raw data of artwk
+					end try
+					
+					(* Now we'll deal with track data *)
+					
+					if player state is paused then
+						set rawTrack to "Paused"
+						
+					else
+						if kind of current track is "Internet audio stream" then
+							set rawTrack to current stream title
+						else
+							if artist of current track is "" then
+								set rawTrack to name of current track
+							else
+								set rawTrack to artist of current track & " - " & name of current track
+							end if
+						end if
+					end if
+				end if
+			end tell
+		end if
+	on error errStr number errorNumber
+		debug("iTunes had a booboo. " & errStr & space & errorNumber, true)
+		return {track:missing value, art:missing value}
+	end try
+	
+	return {track:rawTrack, art:rawArt}
 end check_iTunes
 
 on check_spotify()
-	set tdata to null
+	set rawTrack to null
 	set rawArt to null
 	
-	if application "Spotify" is running then
-		tell application "Spotify"
-			if player state is not stopped then
-				(* First, let's try and figure out the art situation *)
-				
-				set artUrl to artwork url of current track
-				(* We'll finish this later *)
-				
-				(* Now we'll deal with track data *)
-				
-				if player state is paused then
-					set tdata to "Paused"
+	try
+		if application "Spotify" is running then
+			tell application "Spotify"
+				if player state is not stopped then
+					(* First, let's try and figure out the art situation *)
 					
-				else
-					if artist of current track is "" then
-						set tdata to name of current track
+					set artUrl to artwork url of current track
+					(* We'll finish this later *)
+					
+					(* Now we'll deal with track data *)
+					
+					if player state is paused then
+						set rawTrack to "Paused"
+						
 					else
-						set tdata to artist of current track & " - " & name of current track
+						if artist of current track is "" then
+							set rawTrack to name of current track
+						else
+							set rawTrack to artist of current track & " - " & name of current track
+						end if
 					end if
 				end if
-			end if
-		end tell
-	end if
+			end tell
+		end if
+	on error errStr number errorNumber
+		debug("Spotify had a booboo. " & errStr & space & errorNumber, true)
+		return {track:missing value, art:missing value}
+	end try
 	
-	return {track:tdata, art:rawArt}
+	return {track:rawTrack, art:rawArt}
 end check_spotify
 
 on check_nightbot()
-	set tdata to null
-	set rawArt to null
+	set playerTitle to "Nightbot"
+	set desiredPageTitle to "Nightbot - Song Requests"
+	set determinePlayerStateCode to "document.getElementsByClassName('pause-play-container')[0].getElementsByClassName('fa-play')[0].classList.contains('ng-hide');"
 	
-	if application "Safari" is running then
-		tell application "Safari"
-			set nbTab to null
-			
-			try
-				repeat with i in (windows whose its document is not missing value)
-					if (count of (tabs of i)) is greater than 0 then
-						repeat with j in (tabs of i)
-							if name of j is "Nightbot - Song Requests" then
-								set nbTab to j
-								exit repeat
-							end if
-						end repeat
-						if nbTab is not null then
-							exit repeat
-						end if
-					end if
-				end repeat
-			on error errStr number errorNumber
-				log errorNumber & space & errStr
-				return {track:tdata, art:rawArt}
-			end try
-			
-			if nbTab is not null then
-				try
-					tell nbTab
-						set isPlaying to do JavaScript "document.getElementsByClassName('pause-play-container')[0].getElementsByClassName('fa-play')[0].classList.contains('ng-hide');"
-						if isPlaying then
-							set tdata to do JavaScript "document.getElementsByClassName('current-track')[0].getElementsByTagName('h4')[0].textContent;"
-						else
-							set tdata to "Paused"
-						end if
-					end tell
-				on error errStr number errorNumber
-					log errorNumber & space & errStr
-					return {track:tdata, art:rawArt}
-				end try
-			end if
-			
-		end tell
-	end if
+	set grabTrackCode to "document.getElementsByClassName('current-track')[0].getElementsByTagName('h4')[0].textContent;"
+	set stoppedWhenNotPlaying to false
 	
-	return {track:tdata, art:rawArt}
+	return check_web_player(playerTitle, desiredPageTitle, determinePlayerStateCode, grabTrackCode, stoppedWhenNotPlaying)
 end check_nightbot
 
 on check_moobot()
-	set tdata to null
-	set rawArt to null
-	
+	set playerTitle to "Moobot"
+	set desiredPageTitle to "Moobot, your Twitch chat moderator bot"
 	set determinePlayerStateCode to "(document.getElementsByClassName('widget-songrequests')[0].getElementsByClassName('btn-play')[0].getElementsByClassName('icon-stop')[0] != null);"
 	set grabTrackCode to "
 while (document.getElementById('songrequests-widget-info') == null) {
 	document.getElementsByClassName('widget-songrequests')[0].getElementsByClassName('btn-info')[0].click();
 }
 document.getElementById('songrequests-widget-info').getElementsByTagName('p')[0].textContent;"
+	set stoppedWhenNotPlaying to true
 	
-	if application "Safari" is running then
-		tell application "Safari"
-			set nbTab to null
-			
-			try
-				repeat with i in (windows whose its document is not missing value)
-					if (count of (tabs of i)) is greater than 0 then
-						repeat with j in (tabs of i)
-							if name of j is "Moobot, your Twitch chat moderator bot" then
-								set nbTab to j
-								exit repeat
-							end if
-						end repeat
-						if nbTab is not null then
-							exit repeat
-						end if
-					end if
-				end repeat
-			on error errStr number errorNumber
-				log errorNumber & space & errStr
-				return {track:tdata, art:rawArt}
-			end try
-			
-			if nbTab is not null then
-				try
-					tell nbTab
-						set isPlaying to do JavaScript determinePlayerStateCode
-						log isPlaying
-						if isPlaying then
-							set tdata to do JavaScript grabTrackCode
-						end if
-					end tell
-				on error errStr number errorNumber
-					log errorNumber & space & errStr
-					return {track:tdata, art:rawArt}
-				end try
-			end if
-			
-		end tell
-	end if
-	
-	if tdata is missing value then set tdata to null
-	if rawArt is missing value then set rawArt to null
-	
-	return {track:tdata, art:rawArt}
+	return check_web_player(playerTitle, desiredPageTitle, determinePlayerStateCode, grabTrackCode, stoppedWhenNotPlaying)
 end check_moobot
 
 on test_safari()
@@ -227,18 +245,22 @@ on test_safari()
 			end tell
 		end tell
 	on error errStr number errNumber
-		display dialog "You must enable the 'Allow JavaScript from Apple Events' option in Safari's Develop menu to use web-based players.
+		set result to button returned of (display dialog "You must enable the 'Allow JavaScript from Apple Events' option in Safari's Develop menu to use web-based players with Safari.
 
-Continue without Safari support? " with icon caution with title my appname
-		if button returned of dd is "Cancel" then error number -128
+Continue without Safari support? " with icon caution with title my appname)
+		if result is "Cancel" then
+			error number -128
+		else
+			set my safariDisabled to true
+		end if
 	end try
 end test_safari
 
 on run
 	set appname to "TuneOut"
-	set appversion to "0.7"
+	set appversion to "0.8-beta"
+	set debugMode to (name of current application is not appname)
 	
-	log "Hello, I am " & appname & " (" & appversion & ")"
 	set applicationSupportPathP to path to application support from user domain as Unicode text
 	set applicationSupportPath to applicationSupportPathP & appname & ":"
 	set applicationSupportPathT to applicationSupportPath & "tmp:"
@@ -252,6 +274,7 @@ on run
 	set artFilename to "art.png"
 	set artTempFilename to "art.tmp"
 	set clearArtFilename to "clear.png"
+	set logFilename to "debug.txt" (* Unused *)
 	
 	set textFullPath to applicationSupportPath & textFilename
 	set textFullPathT to applicationSupportPathT & textFilename
@@ -259,10 +282,19 @@ on run
 	set artFullPathT to applicationSupportPathT & artFilename
 	set artTempFullPath to applicationSupportPath & artTempFilename
 	set artTempFullPathT to applicationSupportPathT & artTempFilename
+	set logFullPath to applicationSupportPath & logFilename (* Unused *)
 	
-	set tdataOld to ""
-	set adataOld to null
+	set supportedPlayers to {"iTunes", "Spotify", "Nightbot", "Moobot"}
+	
+	set rawTrackOld to ""
 	set rawArtOld to null
+	set dataPlayersOld to {}
+	
+	set safariDisabled to false
+	
+	repeat with i from 1 to count of supportedPlayers
+		copy {track:null, art:null} to the end of dataPlayersOld
+	end repeat
 	
 	set clearData to read (path to resource clearArtFilename)
 	
@@ -272,19 +304,21 @@ on run
 	
 	test_safari()
 	
-	log "It looks like we are ready."
+	debug("Hello, I am " & appname & " (" & appversion & ")", false)
+	debug("Debugging is enabled.", false)
+	
 	set operational to true
 	
-	display notification "TuneOut " & appversion & " is now running. To quit, right-click the Dock icon and click \"Quit\"." sound name "Submarine"
+	display notification appname & space & appversion & " is now running. To quit, right-click the Dock icon and click \"Quit\"." sound name "Submarine"
 	
 	(* Script editor testing *)
 	
-	(*
-	repeat while true
-		set d to idle
-		delay d
-	end repeat
-	*)
+	if name of current application is not appname then
+		repeat while true
+			set d to idle
+			delay d
+		end repeat
+	end if
 end run
 
 on idle
@@ -296,24 +330,30 @@ on idle
 	copy check_nightbot() to end of dataPlayers
 	copy check_moobot() to end of dataPlayers
 	
-	log track of item 1 of dataPlayers
-	log track of item 2 of dataPlayers
-	log track of item 3 of dataPlayers
-	log track of item 4 of dataPlayers
+	debug("
+Iteration for " & (current date), false)
+	debug("iTunes: " & track of item 1 of dataPlayers, false)
+	debug("Spotify: " & track of item 2 of dataPlayers, false)
+	debug("Nightbot: " & track of item 3 of dataPlayers, false)
+	debug("Moobot: " & track of item 4 of dataPlayers, false)
 	
-	repeat with i in dataPlayers
-		log i
-		if track of i is not null then
-			set chosenData to i
-			exit repeat
+	repeat with i from 1 to count of dataPlayers
+		if track of item i of dataPlayers is not null then
+			if track of item i of dataPlayers is not missing value then
+				set chosenData to item i of dataPlayers
+			else
+				debug("We had a missing value error. " & (current date), true)
+				set chosenData to item i of my dataPlayersOld
+			end if
+			if track of chosenData is not null then exit repeat
 		end if
 	end repeat
 	
-	set tdata to track of chosenData
+	set rawTrack to track of chosenData
 	set rawArt to art of chosenData
 	
 	(* If we don't have any data... *)
-	if tdata is null then set tdata to "Stopped"
+	if rawTrack is null then set rawTrack to "Stopped"
 	if rawArt is null then set rawArt to my clearData
 	
 	(* Write images & text to temp files if they have changed *)
@@ -325,17 +365,17 @@ on idle
 			scale tempImage to size 1000
 			save tempImage as PNG in my artFullPathT
 			close tempImage
-			log "Art successfully saved."
+			my debug("Art successfully saved.", false)
 		end tell
 	end if
 	
-	if tdata is not equal to my tdataOld then
-		my write_to_file(tdata, my textFullPathT, false)
-		log "Track data changed. Writing: " & tdata
+	if rawTrack is not equal to my rawTrackOld then
+		my write_to_file(rawTrack, my textFullPathT, false)
+		debug("Track data changed. Writing: " & rawTrack, false)
 	end if
 	
 	(* Move them at the same time to update simultaneously instead of staggered *)
-	if tdata is not equal to my tdataOld then
+	if rawTrack is not equal to my rawTrackOld then
 		do shell script "mv " & quoted form of POSIX path of my textFullPathT & space & quoted form of POSIX path of my applicationSupportPath
 	end if
 	
@@ -348,15 +388,19 @@ on idle
 		set my rawArtOld to rawArt
 	end if
 	
-	if tdata is not equal to my tdataOld then
-		set my tdataOld to tdata
+	if rawTrack is not equal to my rawTrackOld then
+		set my rawTrackOld to rawTrack
 	end if
+	
+	set my dataPlayersOld to dataPlayers
+	
+	debug("We ended up with " & rawTrack, false)
 	
 	return 0.5
 end idle
 
 on reopen
-	display notification (my tdataOld) with title "Current track display"
+	display notification (my rawTrackOld) with title "Current track display"
 end reopen
 
 on quit

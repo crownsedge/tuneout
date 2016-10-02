@@ -13,7 +13,7 @@
 	<key>CFBundleName</key>
 	<string>TuneOut</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.7</string>
+	<string>0.8-beta</string>
 	<key>LSMinimumSystemVersionByArchitecture</key>
 	<dict>
 		<key>x86_64</key>
@@ -26,17 +26,17 @@
 		<key>bundleDividerCollapsed</key>
 		<false/>
 		<key>bundlePositionOfDivider</key>
-		<real>577</real>
+		<real>783</real>
 		<key>dividerCollapsed</key>
 		<false/>
 		<key>eventLogLevel</key>
-		<integer>2</integer>
+		<integer>0</integer>
 		<key>name</key>
 		<string>ScriptWindowState</string>
 		<key>positionOfDivider</key>
 		<real>594</real>
 		<key>savedFrame</key>
-		<string>13 33 876 845 0 0 1440 878 </string>
+		<string>33 33 1082 845 0 0 1440 878 </string>
 		<key>selectedTab</key>
 		<string>log</string>
 	</dict>
