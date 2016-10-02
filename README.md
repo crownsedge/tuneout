@@ -23,7 +23,9 @@ TuneOut is an AppleScript application that saves the currently playing iTunes, S
 
 If you play songs with non-latin characters, make sure your font supports them. The font renderer used by OBS does not fall back to fonts where the glyphs needed appears like macOS font rendering typically does.
 
-Nightbot and Moobot support only works when running in Safari. To enable Safari support, you must enable "Allow JavaScript from Apple Events" in Safari's Develop menu. If you do not have a Develop menu, it can be enabled in the Advanced section of Safari's Preferences.
+Support for web players such as Nightbot and Moobot only functions when running in Safari or Google Chrome.
+
+To enable Safari support, you must enable "Allow JavaScript from Apple Events" in Safari's Develop menu. If you do not have a Develop menu, it can be enabled in the Advanced section of Safari's Preferences.
 
 ## Thanks
 
