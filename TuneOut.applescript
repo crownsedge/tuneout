@@ -247,7 +247,7 @@ on test_safari()
 	on error errStr number errNumber
 		set result to button returned of (display dialog "You must enable the 'Allow JavaScript from Apple Events' option in Safari's Develop menu to use web-based players with Safari.
 
-Continue without Safari support? " with icon caution with title my appname)
+Continue without Safari support? " with icon caution with title my appName)
 		if result is "Cancel" then
 			error number -128
 		else
@@ -257,16 +257,16 @@ Continue without Safari support? " with icon caution with title my appname)
 end test_safari
 
 on run
-	set appname to "TuneOut"
-	set appversion to "0.8-beta"
-	set debugMode to (name of current application is not appname)
+	set appName to "TuneOut"
+	set appVersion to "0.8-beta.2"
+	set debugMode to (name of current application is not appName)
 	
 	set applicationSupportPathP to path to application support from user domain as Unicode text
-	set applicationSupportPath to applicationSupportPathP & appname & ":"
+	set applicationSupportPath to applicationSupportPathP & appName & ":"
 	set applicationSupportPathT to applicationSupportPath & "tmp:"
 	
 	tell application "Finder"
-		if (exists applicationSupportPath) is false then make new folder at applicationSupportPathP with properties {name:appname}
+		if (exists applicationSupportPath) is false then make new folder at applicationSupportPathP with properties {name:appName}
 		if (exists applicationSupportPathT) is false then make new folder at applicationSupportPath with properties {name:"tmp"}
 	end tell
 	
@@ -302,18 +302,31 @@ on run
 		launch
 	end tell
 	
-	test_safari()
+	set operational to false
 	
-	debug("Hello, I am " & appname & " (" & appversion & ")", false)
+	try
+		test_safari()
+	on error errStr number errNumber
+		if errNumber is -128 then
+			if name of current application is appName then
+				return
+				quit
+			else
+				error number -128
+			end if
+		end if
+	end try
+	
+	debug("Hello, I am " & appName & " (" & appVersion & ")", false)
 	debug("Debugging is enabled.", false)
 	
 	set operational to true
 	
-	display notification appname & space & appversion & " is now running. To quit, right-click the Dock icon and click \"Quit\"." sound name "Submarine"
+	display notification appName & space & appVersion & " is now running. To quit, right-click the Dock icon and click \"Quit\"." sound name "Submarine"
 	
 	(* Script editor testing *)
 	
-	if name of current application is not appname then
+	if name of current application is not appName then
 		repeat while true
 			set d to idle
 			delay d
@@ -322,79 +335,83 @@ on run
 end run
 
 on idle
-	set chosenData to {track:null, art:null}
-	set dataPlayers to {}
-	
-	copy check_iTunes() to end of dataPlayers
-	copy check_spotify() to end of dataPlayers
-	copy check_nightbot() to end of dataPlayers
-	copy check_moobot() to end of dataPlayers
-	
-	debug("
-Iteration for " & (current date), false)
-	debug("iTunes: " & track of item 1 of dataPlayers, false)
-	debug("Spotify: " & track of item 2 of dataPlayers, false)
-	debug("Nightbot: " & track of item 3 of dataPlayers, false)
-	debug("Moobot: " & track of item 4 of dataPlayers, false)
-	
-	repeat with i from 1 to count of dataPlayers
-		if track of item i of dataPlayers is not null then
-			if track of item i of dataPlayers is not missing value then
-				set chosenData to item i of dataPlayers
-			else
-				debug("We had a missing value error. " & (current date), true)
-				set chosenData to item i of my dataPlayersOld
-			end if
-			if track of chosenData is not null then exit repeat
-		end if
-	end repeat
-	
-	set rawTrack to track of chosenData
-	set rawArt to art of chosenData
-	
-	(* If we don't have any data... *)
-	if rawTrack is null then set rawTrack to "Stopped"
-	if rawArt is null then set rawArt to my clearData
-	
-	(* Write images & text to temp files if they have changed *)
-	if rawArt is not equal to my rawArtOld then
-		my binary_write_to_file(rawArt, my artTempFullPathT, false)
+	if my operational then
+		set chosenData to {track:null, art:null}
+		set dataPlayers to {}
 		
-		tell application "Image Events"
-			set tempImage to open my artTempFullPathT
-			scale tempImage to size 1000
-			save tempImage as PNG in my artFullPathT
-			close tempImage
-			my debug("Art successfully saved.", false)
-		end tell
+		copy check_iTunes() to end of dataPlayers
+		copy check_spotify() to end of dataPlayers
+		copy check_nightbot() to end of dataPlayers
+		copy check_moobot() to end of dataPlayers
+		
+		debug("
+Iteration for " & (current date), false)
+		debug("iTunes: " & track of item 1 of dataPlayers, false)
+		debug("Spotify: " & track of item 2 of dataPlayers, false)
+		debug("Nightbot: " & track of item 3 of dataPlayers, false)
+		debug("Moobot: " & track of item 4 of dataPlayers, false)
+		
+		repeat with i from 1 to count of dataPlayers
+			if track of item i of dataPlayers is not null then
+				if track of item i of dataPlayers is not missing value then
+					set chosenData to item i of dataPlayers
+				else
+					debug("We had a missing value error. " & (current date), true)
+					set chosenData to item i of my dataPlayersOld
+				end if
+				if track of chosenData is not null then exit repeat
+			end if
+		end repeat
+		
+		set rawTrack to track of chosenData
+		set rawArt to art of chosenData
+		
+		(* If we don't have any data... *)
+		if rawTrack is null then set rawTrack to "Stopped"
+		if rawArt is null then set rawArt to my clearData
+		
+		(* Write images & text to temp files if they have changed *)
+		if rawArt is not equal to my rawArtOld then
+			my binary_write_to_file(rawArt, my artTempFullPathT, false)
+			
+			tell application "Image Events"
+				set tempImage to open my artTempFullPathT
+				scale tempImage to size 1000
+				save tempImage as PNG in my artFullPathT
+				close tempImage
+				my debug("Art successfully saved.", false)
+			end tell
+		end if
+		
+		if rawTrack is not equal to my rawTrackOld then
+			my write_to_file(rawTrack, my textFullPathT, false)
+			debug("Track data changed. Writing: " & rawTrack, false)
+		end if
+		
+		(* Move them at the same time to update simultaneously instead of staggered *)
+		if rawTrack is not equal to my rawTrackOld then
+			do shell script "mv " & quoted form of POSIX path of my textFullPathT & space & quoted form of POSIX path of my applicationSupportPath
+		end if
+		
+		if rawArt is not equal to my rawArtOld then
+			do shell script "mv " & quoted form of POSIX path of my artFullPathT & space & quoted form of POSIX path of my applicationSupportPath
+		end if
+		
+		(* Finally, update old data listing *)
+		if rawArt is not equal to my rawArtOld then
+			set my rawArtOld to rawArt
+		end if
+		
+		if rawTrack is not equal to my rawTrackOld then
+			set my rawTrackOld to rawTrack
+		end if
+		
+		set my dataPlayersOld to dataPlayers
+		
+		debug("We ended up with " & rawTrack, false)
+	else
+		quit
 	end if
-	
-	if rawTrack is not equal to my rawTrackOld then
-		my write_to_file(rawTrack, my textFullPathT, false)
-		debug("Track data changed. Writing: " & rawTrack, false)
-	end if
-	
-	(* Move them at the same time to update simultaneously instead of staggered *)
-	if rawTrack is not equal to my rawTrackOld then
-		do shell script "mv " & quoted form of POSIX path of my textFullPathT & space & quoted form of POSIX path of my applicationSupportPath
-	end if
-	
-	if rawArt is not equal to my rawArtOld then
-		do shell script "mv " & quoted form of POSIX path of my artFullPathT & space & quoted form of POSIX path of my applicationSupportPath
-	end if
-	
-	(* Finally, update old data listing *)
-	if rawArt is not equal to my rawArtOld then
-		set my rawArtOld to rawArt
-	end if
-	
-	if rawTrack is not equal to my rawTrackOld then
-		set my rawTrackOld to rawTrack
-	end if
-	
-	set my dataPlayersOld to dataPlayers
-	
-	debug("We ended up with " & rawTrack, false)
 	
 	return 0.5
 end idle
