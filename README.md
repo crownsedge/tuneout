@@ -13,8 +13,9 @@ TuneOut is an AppleScript application that saves the currently playing iTunes, S
 ## How to build
 
 1. Clone the repository to your macOS computer.
-2. In the repository directory, make `build.command` executable: `chmod +x build.command`
-3. Double-click `build.command` in Finder or run it in the terminal: `./build.command`
+2. In `build.command`, replace the code signing identity with your own.
+3. In the repository directory, make `build.command` executable: `chmod +x build.command`
+4. Double-click `build.command` in Finder or run it in the terminal: `./build.command`
 
 TuneOut.app will be built in `./build/` (where `.` is the repository folder) and a .zip file with the version number will be created.
 
