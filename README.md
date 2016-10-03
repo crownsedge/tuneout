@@ -16,7 +16,7 @@ TuneOut is an AppleScript application that saves the currently playing iTunes, S
 2. In the repository directory, make `build.command` executable: `chmod +x build.command`
 3. Double-click `build.command` in Finder or run it in the terminal: `./build.command`
 
-TuneOut.app will be built in `./build` (where `.` is the repository folder) and a .zip file with the version number will be created.
+TuneOut.app will be built in `./build/` (where `.` is the repository folder) and a .zip file with the version number will be created.
 
 ## Caveats
 
