@@ -13,7 +13,7 @@
 	<key>CFBundleName</key>
 	<string>TuneOut</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.8</string>
+	<string>0.9-alpha</string>
 	<key>LSMinimumSystemVersionByArchitecture</key>
 	<dict>
 		<key>x86_64</key>

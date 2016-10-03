@@ -91,7 +91,7 @@ on check_web_player(playerTitle, desiredPageTitle, determinePlayerStateCode, gra
 			if my debugMode then error errStr number errorNumber
 		end try
 	end if
-	if (rawTrack is null or rawTrack is missing value) and (rawArt is null or rawArt is missing value) then
+	if (rawTrack is null or missing value) and (rawArt is null or missing value) then
 		(* Google Chrome Support *)
 		try
 			if application "Google Chrome" is running then
