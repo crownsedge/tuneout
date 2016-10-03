@@ -189,8 +189,20 @@ on check_spotify()
 				if player state is not stopped then
 					(* First, let's try and figure out the art situation *)
 					
-					set artUrl to artwork url of current track
-					(* We'll finish this later *)
+					set spotifyArtUrl to artwork url of current track
+					if spotifyArtUrl is not my spotifyArtUrlOld then
+						(* 	If you can figure out a way to do this without saving it to the filesystem
+						and also doesn't glitch out the art, please file a pull request. For some
+						reason it's almost as if the script continues on without waiting for the
+						file to fully download. *)
+						
+						set result to do shell script "curl " & spotifyArtUrl & " -o " & quoted form of POSIX path of my spotifyArtTempFullPathT
+						set rawArt to read file (my spotifyArtTempFullPathT)
+						
+						set my spotifyArtUrlOld to spotifyArtUrl
+					else
+						set rawArt to my rawArtOld
+					end if
 					
 					(* Now we'll deal with track data *)
 					
@@ -272,7 +284,7 @@ end test_safari
 
 on run
 	set appName to "TuneOut"
-	set appVersion to "0.8-beta.2"
+	set appVersion to "0.8"
 	set debugMode to (name of current application is not appName)
 	
 	set applicationSupportPathP to path to application support from user domain as Unicode text
@@ -288,6 +300,7 @@ on run
 	set artFilename to "art.png"
 	set artTempFilename to "art.tmp"
 	set clearArtFilename to "clear.png"
+	set spotifyArtTempFilename to "spotify.jpg"
 	set logFilename to "debug.txt" (* Unused *)
 	
 	set textFullPath to applicationSupportPath & textFilename
@@ -296,6 +309,7 @@ on run
 	set artFullPathT to applicationSupportPathT & artFilename
 	set artTempFullPath to applicationSupportPath & artTempFilename
 	set artTempFullPathT to applicationSupportPathT & artTempFilename
+	set spotifyArtTempFullPathT to applicationSupportPathT & spotifyArtTempFilename
 	set logFullPath to applicationSupportPath & logFilename (* Unused *)
 	
 	set supportedPlayers to {"iTunes", "Spotify", "Playful Stream", "Nightbot", "Moobot"}
@@ -303,6 +317,7 @@ on run
 	set rawTrackOld to ""
 	set rawArtOld to null
 	set dataPlayersOld to {}
+	set spotifyArtUrlOld to ""
 	
 	set safariDisabled to false
 	
