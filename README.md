@@ -13,11 +13,10 @@ TuneOut is an AppleScript application that saves the currently playing iTunes, S
 ## How to build
 
 1. Clone the repository to your macOS computer.
-2. Use Script Editor to open the TuneOut.scpt file.
-3. Click "File ‣ Export..."
-4. Change the File Format to "Application" and ensure "Stay open after run handler" (and optionally "Run-only") is checked.
-5. Click "Save".
-6. (Optional) Manually replace the applet.icns file in the application bundle.
+2. In the repository directory, make `build.command` executable: `chmod +x build.command`
+3. Double-click `build.command` in Finder or run it in the terminal: `./build.command`
+
+TuneOut.app will be built in `./build` (where `.` is the repository folder) and a .zip file with the version number will be created.
 
 ## Caveats
 
