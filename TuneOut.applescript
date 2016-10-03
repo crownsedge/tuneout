@@ -88,6 +88,7 @@ on check_web_player(playerTitle, desiredPageTitle, determinePlayerStateCode, gra
 			debug("[SAFARI] " & desiredPageTitle & " had a booboo. " & errStr & space & errorNumber, true)
 			set rawTrack to missing value
 			set rawArt to missing value
+			if my debugMode then error errStr number errorNumber
 		end try
 	end if
 	if (rawTrack is null or rawTrack is missing value) and (rawArt is null or rawArt is missing value) then
@@ -128,6 +129,7 @@ on check_web_player(playerTitle, desiredPageTitle, determinePlayerStateCode, gra
 			debug("[CHROME] " & desiredPageTitle & " had a booboo. " & errStr & space & errorNumber, true)
 			set rawTrack to missing value
 			set rawArt to missing value
+			if my debugMode then error errStr number errorNumber
 		end try
 	end if
 	
@@ -170,6 +172,7 @@ on check_iTunes()
 		end if
 	on error errStr number errorNumber
 		debug("iTunes had a booboo. " & errStr & space & errorNumber, true)
+		if my debugMode then error errStr number errorNumber
 		return {track:missing value, art:missing value}
 	end try
 	
@@ -206,11 +209,22 @@ on check_spotify()
 		end if
 	on error errStr number errorNumber
 		debug("Spotify had a booboo. " & errStr & space & errorNumber, true)
+		if my debugMode then error errStr number errorNumber
 		return {track:missing value, art:missing value}
 	end try
 	
 	return {track:rawTrack, art:rawArt}
 end check_spotify
+
+on check_playful_stream()
+	set playerTitle to "Playful Stream"
+	set desiredPageTitle to "Playful"
+	set determinePlayerStateCode to "(document.getElementById('b-pause').style.visibility == 'visible');"
+	set grabTrackCode to "document.getElementById('now-playing-data').textContent;"
+	set stoppedWhenNotPlaying to false
+	
+	return check_web_player(playerTitle, desiredPageTitle, determinePlayerStateCode, grabTrackCode, stoppedWhenNotPlaying)
+end check_playful_stream
 
 on check_nightbot()
 	set playerTitle to "Nightbot"
@@ -284,7 +298,7 @@ on run
 	set artTempFullPathT to applicationSupportPathT & artTempFilename
 	set logFullPath to applicationSupportPath & logFilename (* Unused *)
 	
-	set supportedPlayers to {"iTunes", "Spotify", "Nightbot", "Moobot"}
+	set supportedPlayers to {"iTunes", "Spotify", "Playful Stream", "Nightbot", "Moobot"}
 	
 	set rawTrackOld to ""
 	set rawArtOld to null
@@ -341,6 +355,7 @@ on idle
 		
 		copy check_iTunes() to end of dataPlayers
 		copy check_spotify() to end of dataPlayers
+		copy check_playful_stream() to end of dataPlayers
 		copy check_nightbot() to end of dataPlayers
 		copy check_moobot() to end of dataPlayers
 		
@@ -348,8 +363,9 @@ on idle
 Iteration for " & (current date), false)
 		debug("iTunes: " & track of item 1 of dataPlayers, false)
 		debug("Spotify: " & track of item 2 of dataPlayers, false)
-		debug("Nightbot: " & track of item 3 of dataPlayers, false)
-		debug("Moobot: " & track of item 4 of dataPlayers, false)
+		debug("Playful Stream: " & track of item 3 of dataPlayers, false)
+		debug("Nightbot: " & track of item 4 of dataPlayers, false)
+		debug("Moobot: " & track of item 5 of dataPlayers, false)
 		
 		repeat with i from 1 to count of dataPlayers
 			if track of item i of dataPlayers is not null then
