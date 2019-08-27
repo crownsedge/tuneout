@@ -1,6 +1,6 @@
 (* 
 
-Copyright © 2016 Wil Donaldson.
+Copyright Â© 2016, 2019 Ruth Harris.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,7 @@ on write_to_file(this_data, target_file, append_data)
 		set the target_file to the target_file as string
 		set the open_target_file to open for access file target_file with write permission
 		if append_data is false then set eof of the open_target_file to 0
-		write this_data to the open_target_file as Çclass utf8È starting at eof
+		write this_data to the open_target_file as Ã‡class utf8Ãˆ starting at eof
 		close access the open_target_file
 		return true
 	on error
