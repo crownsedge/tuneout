@@ -37,7 +37,7 @@ Additional thanks to [Christopher T. Howlett](http://howlettstudios.com) for the
 
 TuneOut is licensed under the MIT license.
 
-Copyright © 2016 Wil Donaldson.
+Copyright © 2016, 2019 Ruth Harris.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
